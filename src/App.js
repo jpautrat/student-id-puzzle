@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import './App.css';
 
 function App() {
@@ -10,15 +10,34 @@ function App() {
   const [tiles, setTiles] = useState([]);
   const [emptyIndex, setEmptyIndex] = useState(8); // Last position is empty
   const [isWon, setIsWon] = useState(false);
+  const [confetti, setConfetti] = useState([]);
 
-  // Initialize the puzzle
-  useEffect(() => {
-    initializePuzzle();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Function to get valid moves for the empty space
+  const getValidMoves = useCallback((emptyPos) => {
+    const row = Math.floor(emptyPos / 3);
+    const col = emptyPos % 3;
+    const validMoves = [];
+
+    // Check all four possible adjacent positions (up, right, down, left)
+    const adjacentPositions = [
+      { row: row - 1, col: col },     // up
+      { row: row, col: col + 1 },     // right
+      { row: row + 1, col: col },     // down
+      { row: row, col: col - 1 }      // left
+    ];
+
+    // Find valid adjacent positions
+    for (const pos of adjacentPositions) {
+      if (pos.row >= 0 && pos.row < 3 && pos.col >= 0 && pos.col < 3) {
+        validMoves.push(pos.row * 3 + pos.col);
+      }
+    }
+
+    return validMoves;
   }, []);
 
   // Function to initialize the puzzle with shuffled numbers
-  const initializePuzzle = () => {
+  const initializePuzzle = useCallback(() => {
     // Create an array with the target sequence digits and a null for the empty space
     const numbers = targetSequence.split('').map(num => parseInt(num));
     numbers.push(null); // Add empty space
@@ -43,34 +62,18 @@ function App() {
     setTiles(currentTiles);
     setEmptyIndex(currentEmptyIndex);
     setIsWon(false);
-  };
+    setConfetti([]);
+  }, [getValidMoves, targetSequence]);
 
-  // Function to get valid moves for the empty space
-  const getValidMoves = (emptyPos) => {
-    const row = Math.floor(emptyPos / 3);
-    const col = emptyPos % 3;
-    const validMoves = [];
-
-    // Check all four possible adjacent positions (up, right, down, left)
-    const adjacentPositions = [
-      { row: row - 1, col: col },     // up
-      { row: row, col: col + 1 },     // right
-      { row: row + 1, col: col },     // down
-      { row: row, col: col - 1 }      // left
-    ];
-
-    // Find valid adjacent positions
-    for (const pos of adjacentPositions) {
-      if (pos.row >= 0 && pos.row < 3 && pos.col >= 0 && pos.col < 3) {
-        validMoves.push(pos.row * 3 + pos.col);
-      }
-    }
-
-    return validMoves;
-  };
+  // Initialize the puzzle
+  useEffect(() => {
+    initializePuzzle();
+  }, [initializePuzzle]);
 
   // Function to handle tile click
   const handleTileClick = (index) => {
+    if (isWon) return; // Prevent moves after winning
+
     // Only allow moving tiles adjacent to the empty space
     const validMoves = getValidMoves(emptyIndex);
 
@@ -86,47 +89,102 @@ function App() {
       setEmptyIndex(index);
 
       // Check if the puzzle is solved
-      checkWinCondition(newTiles);
+      checkWinCondition(newTiles, index);
     }
   };
 
   // Function to check if the puzzle is solved
-  const checkWinCondition = (currentTiles) => {
+  const checkWinCondition = (currentTiles, newEmptyIndex) => {
     // Create a sequence without the empty space
     const tilesWithoutEmpty = [...currentTiles];
-    tilesWithoutEmpty.splice(emptyIndex, 1);
+    tilesWithoutEmpty.splice(newEmptyIndex, 1);
 
     const currentSequence = tilesWithoutEmpty.join('');
     if (currentSequence === targetSequence) {
       setIsWon(true);
+      createConfetti();
     }
+  };
+
+  // Function to create confetti animation
+  const createConfetti = () => {
+    const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffa500', '#800080'];
+    const confettiCount = 100;
+    const newConfetti = [];
+
+    for (let i = 0; i < confettiCount; i++) {
+      newConfetti.push({
+        id: i,
+        x: Math.random() * 100, // Random horizontal position (0-100%)
+        size: Math.random() * 8 + 5, // Random size (5-13px)
+        color: colors[Math.floor(Math.random() * colors.length)],
+        speed: Math.random() * 3 + 2, // Random fall speed
+        delay: Math.random() * 2 // Random start delay
+      });
+    }
+
+    setConfetti(newConfetti);
   };
 
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Student ID Puzzle</h1>
-        <p>Arrange the numbers to match your Student ID: {targetSequence}</p>
-        <p className="instructions">Click on a tile adjacent to the empty space to move it.</p>
+        {/* Confetti animation */}
+        {confetti.map((c) => (
+          <div
+            key={c.id}
+            className="confetti"
+            style={{
+              left: `${c.x}%`,
+              width: `${c.size}px`,
+              height: `${c.size}px`,
+              backgroundColor: c.color,
+              animationDuration: `${c.speed}s`,
+              animationDelay: `${c.delay}s`
+            }}
+          />
+        ))}
 
-        {isWon ? (
-          <div className="win-message">
-            <h2>Congratulations! You won!</h2>
-            <button onClick={initializePuzzle}>Play Again</button>
+        <div className="game-container">
+          <h1 className="game-title">Student ID Puzzle</h1>
+          <div className="target-sequence">
+            Target: {targetSequence.split('').join(' ')}
           </div>
-        ) : (
-          <div className="puzzle-board">
-            {tiles.map((tile, index) => (
-              <div
-                key={index}
-                className={`puzzle-tile ${tile === null ? 'empty' : ''}`}
-                onClick={() => tile !== null && handleTileClick(index)}
-              >
-                {tile}
+          <p className="instructions">
+            Click on a tile adjacent to the empty space to move it.
+            Arrange the numbers to match your Student ID sequence.
+          </p>
+
+          {isWon ? (
+            <div className="win-message">
+              <h2 className="win-title">Congratulations!</h2>
+              <p>You successfully arranged the numbers to match your Student ID!</p>
+              <button className="play-again-btn" onClick={initializePuzzle}>
+                Play Again
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="puzzle-board">
+                {tiles.map((tile, index) => (
+                  <div
+                    key={index}
+                    className={`puzzle-tile ${tile === null ? 'empty' : ''}`}
+                    onClick={() => tile !== null && handleTileClick(index)}
+                  >
+                    {tile}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
+
+              <div className="controls">
+                <button className="shuffle-btn" onClick={initializePuzzle}>
+                  Shuffle
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </header>
     </div>
   );
