@@ -37,13 +37,26 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-.puzzle-tile:nth-child(odd) {
+.puzzle-tile:nth-child(odd):not(.empty) {
   background-color: #ffffff;
 }
 
-.puzzle-tile:nth-child(even) {
+.puzzle-tile:nth-child(even):not(.empty) {
   background-color: #8b4513; /* Brown color similar to the example */
   color: white;
+}
+
+.puzzle-tile.empty {
+  background-color: #e0e0e0;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+  cursor: default;
+}
+
+.instructions {
+  font-size: 1rem;
+  margin-bottom: 20px;
+  max-width: 80%;
+  text-align: center;
 }
 
 .puzzle-tile:hover {
