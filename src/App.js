@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import './App.css';
 
 function App() {
-  // Student ID - replace with your own ID
-  const studentId = '801321666'; // Example student ID
+  // Student ID
+  const studentId = '800752772'; // Student ID
   const targetSequence = studentId.slice(0, 8); // Take first 8 digits
 
   // State for the puzzle tiles
